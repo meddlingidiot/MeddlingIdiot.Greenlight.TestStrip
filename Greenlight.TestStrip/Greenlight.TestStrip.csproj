@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The instrument the other samples are tested with. Five pads and a toggle on a strip you can
+    drag anywhere: press one and Greenlight holds every indicator it drives at that colour - its
+    own tray icon, the desktop stoplight, the hardware lamps and every attached app - so a client
+    can be made to go red without breaking a build to do it.
+
+    It is the only thing in the family that writes rather than reads. Everything it does goes
+    through one SDK call, HoldIndicatorsAsync, and the hold is released by the host the moment
+    this process detaches - which is why the strip is a window that stays open rather than a
+    command line that sets a colour and exits.
+
+      dotnet add package MeddlingIdiot.Greenlight.Sdk
+
+    net10.0-windows for the tray icon and the screen geometry. The SDK itself is plain
+    net8.0/net10.0.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Greenlight.TestStrip</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\MeddlingIdiot.ico</ApplicationIcon>
+    <!-- Not a package. Fallout's Package target packs the whole solution. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+  </ItemGroup>
+
+  <!-- The SDK and the updater, the same way your own app would take them. -->
+  <ItemGroup>
+    <PackageReference Include="MeddlingIdiot.Greenlight.Sdk" Version="1.2.0" />
+    <PackageReference Include="MeddlingIdiot.Velopack" Version="1.2.0" />
+  </ItemGroup>
+
+  <!-- The mascot, for the tray icon and the executable. Same icon the other apps use. -->
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+</Project>
