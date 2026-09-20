@@ -11,9 +11,10 @@ namespace Greenlight.TestStrip;
 /// back to a strip that has been hidden.
 /// </summary>
 /// <remarks>
-/// The strip has no title bar and no close button on purpose — closing it would drop the hold,
-/// and a close button an inch from the RED pad is a trap. Quitting is here instead, where it
-/// takes a deliberate trip to find.
+/// The strip has no title bar, and its close button hides rather than quits: the hold lives as
+/// long as the process does, so a close that ended it would drop somebody's red light halfway
+/// through the thing they were testing. Quitting is here instead, where it takes a deliberate
+/// trip to find — and where it is nowhere near the RED pad people are actually aiming at.
 /// </remarks>
 [SupportedOSPlatform("windows")]
 public sealed class StripTray : IDisposable

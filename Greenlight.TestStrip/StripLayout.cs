@@ -13,7 +13,7 @@ public readonly record struct PadRect(double X, double Y, double Width, double H
 }
 
 /// <summary>
-/// Where everything sits on the strip: the grip, the five pads, the building toggle.
+/// Where everything sits on the strip: the grip, the five pads, the building toggle, the close.
 /// </summary>
 /// <remarks>
 /// Pure arithmetic and no Avalonia, for the same reason the scene is: the canvas draws these
@@ -37,6 +37,15 @@ public sealed class StripLayout(double scale = 1.0)
     private const double PadHeight = 44;
     private const double ToggleWidth = 78;
 
+    /// <summary>The close button on the right-hand end. A square, and deliberately a small one.</summary>
+    /// <remarks>
+    /// Sized and placed to be hard to hit by accident: it is past the BUILDING toggle, so there is
+    /// most of the strip between it and the RED pad that people are aiming at, and it is the only
+    /// thing here that is not full pad height. Pressing it hides the strip to the tray — it does
+    /// not quit, and the hold rides through it.
+    /// </remarks>
+    private const double CloseSize = 22;
+
     /// <summary>The bloom is drawn outside the pad, so the chassis needs room for it not to clip.</summary>
     /// <remarks>
     /// Kept under half the gap between pads. Reaching further looks better on a pad in isolation
@@ -49,7 +58,7 @@ public sealed class StripLayout(double scale = 1.0)
     /// <summary>The strip's overall size, which is what the window is set to.</summary>
     public double Width => (Padding * 2 + GripWidth + Gap
                             + PadWidth * Order.Length + Gap * Order.Length
-                            + ToggleWidth) * Scale;
+                            + ToggleWidth + Gap + CloseSize) * Scale;
 
     public double Height => (Padding * 2 + PadHeight) * Scale;
 
@@ -76,6 +85,17 @@ public sealed class StripLayout(double scale = 1.0)
         }
     }
 
+    /// <summary>The close button, past the toggle on the right-hand end, centred in the chassis.</summary>
+    public PadRect Close
+    {
+        get
+        {
+            var x = Padding + GripWidth + Gap + Order.Length * (PadWidth + Gap) + ToggleWidth + Gap;
+            var y = Padding + (PadHeight - CloseSize) / 2;
+            return new PadRect(x * Scale, y * Scale, CloseSize * Scale, CloseSize * Scale);
+        }
+    }
+
     /// <summary>Which pad is under a point, or null for the chassis — which is where a drag starts.</summary>
     public Pad? HitTest(double x, double y)
     {
@@ -88,4 +108,7 @@ public sealed class StripLayout(double scale = 1.0)
 
     /// <summary>Whether a point is on the building toggle.</summary>
     public bool HitsToggle(double x, double y) => Toggle.Contains(x, y);
+
+    /// <summary>Whether a point is on the close button.</summary>
+    public bool HitsClose(double x, double y) => Close.Contains(x, y);
 }

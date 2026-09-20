@@ -23,6 +23,7 @@ public sealed class StripLayoutTests
         }
 
         Assert.True(layout.Toggle.X >= previous.Right);
+        Assert.True(layout.Close.X >= layout.Toggle.Right);
     }
 
     [Fact]
@@ -40,6 +41,8 @@ public sealed class StripLayoutTests
         }
 
         Assert.InRange(layout.Toggle.Right, 0, layout.Width);
+        Assert.InRange(layout.Close.Right, 0, layout.Width);
+        Assert.InRange(layout.Close.Bottom, 0, layout.Height);
     }
 
     [Fact]
@@ -61,6 +64,57 @@ public sealed class StripLayoutTests
 
         Assert.True(layout.HitsToggle(layout.Toggle.CentreX, layout.Toggle.CentreY));
         Assert.Null(layout.HitTest(layout.Toggle.CentreX, layout.Toggle.CentreY));
+    }
+
+    [Fact]
+    public void The_centre_of_the_close_hits_the_close_and_nothing_else()
+    {
+        var layout = new StripLayout();
+
+        Assert.True(layout.HitsClose(layout.Close.CentreX, layout.Close.CentreY));
+        Assert.Null(layout.HitTest(layout.Close.CentreX, layout.Close.CentreY));
+        Assert.False(layout.HitsToggle(layout.Close.CentreX, layout.Close.CentreY));
+    }
+
+    [Fact]
+    public void The_close_is_nowhere_near_the_red_pad()
+    {
+        // The whole reason the strip went without a close button for so long: one beside RED is a
+        // way to lose a hold by aiming badly. It lives past the toggle, a pad's width clear of it.
+        var layout = new StripLayout();
+        var red = layout.RectFor(Pad.Red);
+
+        Assert.True(layout.Close.X - red.Right > red.Width,
+            "The close button is within a pad's width of RED.");
+    }
+
+    [Fact]
+    public void Nothing_on_the_close_hits_a_pad_or_the_toggle()
+    {
+        var layout = new StripLayout();
+        var close = layout.Close;
+
+        foreach (var (x, y) in new[]
+                 {
+                     (close.X, close.Y), (close.Right, close.Y),
+                     (close.X, close.Bottom), (close.Right, close.Bottom),
+                 })
+        {
+            Assert.Null(layout.HitTest(x, y));
+            Assert.False(layout.HitsToggle(x, y));
+        }
+    }
+
+    [Theory]
+    [InlineData(0.8)]
+    [InlineData(1.0)]
+    [InlineData(1.8)]
+    public void The_close_follows_the_scale_too(double scale)
+    {
+        var layout = new StripLayout(scale);
+
+        Assert.True(layout.HitsClose(layout.Close.CentreX, layout.Close.CentreY));
+        Assert.InRange(layout.Close.Right, 0, layout.Width);
     }
 
     [Fact]

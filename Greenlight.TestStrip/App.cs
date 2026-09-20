@@ -183,16 +183,30 @@ public sealed class App : Application
         {
             OnPadPressed = Press,
             OnToggleBuilding = ToggleBuilding,
+            OnHideRequested = HideStrip,
         };
 
         _window.Show();
+        RefreshTray();
     }
 
+    /// <summary>
+    /// Put the strip away. Closing its window is not quitting — the shutdown mode above is what
+    /// makes that true — so the hold survives being hidden, and the tray icon is the way back.
+    /// </summary>
     private void HideStrip()
     {
         _window?.Close();
         _window = null;
+
+        // The tray's tick follows the window, and the window can now be dismissed from the strip
+        // itself rather than only from the menu that draws the tick.
+        RefreshTray();
     }
+
+    /// <summary>Tell the tray what is being held, and whether the strip is on screen.</summary>
+    private void RefreshTray() =>
+        _tray?.Show(_held, _building, _greenlight?.Availability ?? GreenlightAvailability.Unavailable);
 
     /// <summary>Re-read the file, for colours changed by hand while this was running.</summary>
     private void ReloadConfig()

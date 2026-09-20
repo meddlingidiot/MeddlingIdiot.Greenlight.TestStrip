@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.Versioning;
 using Avalonia;
 using Avalonia.Controls;
@@ -15,26 +16,32 @@ namespace Greenlight.TestStrip;
 /// <para>
 /// The opposite of every other client in the family — those are click-through by design, and
 /// this one exists to be clicked. There is no title bar, so dragging is on the chassis: press
-/// anywhere that is not a pad and the window moves. That means the whole strip is a handle
-/// except for the six places where it is a button, which is why the layout is a tested object
+/// anywhere that is not a button and the window moves. That means the whole strip is a handle
+/// except for the seven places where it is a button, which is why the layout is a tested object
 /// rather than numbers inlined into the render.
 /// </para>
 /// <para>
-/// The window stays open for as long as a hold is meant to last. Greenlight drops a hold when
-/// the client that placed it detaches, so a strip that set red and exited would leave the light
-/// telling the truth again a moment later — which is the one behaviour that would make this
-/// tool useless for testing anything.
+/// The <i>process</i> stays running for as long as a hold is meant to last — not this window.
+/// Greenlight drops a hold when the client that placed it detaches, so a strip that set red and
+/// exited would leave the light telling the truth again a moment later, which is the one
+/// behaviour that would make this tool useless for testing anything. Closing the window is
+/// therefore a hide rather than a quit: the close button hands it to the tray, and the hold
+/// rides through untouched.
 /// </para>
 /// </remarks>
 [SupportedOSPlatform("windows")]
 public sealed class StripWindow : Window
 {
     private readonly StripConfig _config;
-    private readonly StripCanvas _canvas;
     private readonly DispatcherTimer _frames;
     private readonly Stopwatch _clock = Stopwatch.StartNew();
 
+    // Neither of these is readonly, because a config change rebuilds both. They are a pair — the
+    // canvas draws a layout and the window hit-tests the same one - so ShowCanvas sets them
+    // together, and is the only thing that assigns the canvas.
     private StripLayout _layout;
+    private StripCanvas _canvas;
+
     private TimeSpan _lastFrame;
     private StripFrame _drawn;
 
@@ -57,8 +64,7 @@ public sealed class StripWindow : Window
         TransparencyLevelHint = [WindowTransparencyLevel.Transparent];
         Opacity = config.Opacity;
 
-        _canvas = new StripCanvas(scene, config, _layout);
-        Content = _canvas;
+        ShowCanvas();
 
         Width = _layout.Width;
         Height = _layout.Height;
@@ -77,6 +83,12 @@ public sealed class StripWindow : Window
 
     /// <summary>The building toggle was pressed.</summary>
     public Action? OnToggleBuilding { get; set; }
+
+    /// <summary>
+    /// The close button was pressed. The app puts the strip away in the tray — it does not quit,
+    /// because quitting is what drops the hold.
+    /// </summary>
+    public Action? OnHideRequested { get; set; }
 
     protected override void OnOpened(EventArgs e)
     {
@@ -119,6 +131,15 @@ public sealed class StripWindow : Window
             return;
         }
 
+        // Tested before the drag, like the pads: this closes the window, and starting a move drag
+        // on a window that is about to go away leaves the pointer captured by a dead gesture.
+        if (_layout.HitsClose(point.X, point.Y))
+        {
+            OnHideRequested?.Invoke();
+            e.Handled = true;
+            return;
+        }
+
         // Anywhere else on the chassis is the handle. BeginMoveDrag hands the window to the window
         // manager for the rest of the gesture, which is what makes it snap and behave like any
         // other window rather than chasing the pointer a frame behind.
@@ -132,7 +153,7 @@ public sealed class StripWindow : Window
 
         // The canvas holds the layout it was built with, so a new scale means a new canvas. Cheaper
         // than making the layout mutable and having two objects that can disagree about where a pad is.
-        Content = new StripCanvas(Scene, _config, _layout);
+        ShowCanvas();
 
         Width = _layout.Width;
         Height = _layout.Height;
@@ -140,6 +161,21 @@ public sealed class StripWindow : Window
         Topmost = _config.Topmost;
 
         InvalidateVisual();
+    }
+
+    /// <summary>Hang a canvas built for the current layout on the window, and keep hold of it.</summary>
+    /// <remarks>
+    /// The field and the content are set in one place because they are one thing. A canvas that is
+    /// no longer the content is no longer in the visual tree, and <c>GetPosition</c> against a
+    /// visual with no root does not report the strip's own coordinates — so a canvas left behind by
+    /// a rebuild does not make <see cref="OnPointerPressed"/> slightly inaccurate, it makes every
+    /// press miss every button and turn into a drag, which reads as the strip having died.
+    /// </remarks>
+    [MemberNotNull(nameof(_canvas))]
+    private void ShowCanvas()
+    {
+        _canvas = new StripCanvas(Scene, _config, _layout);
+        Content = _canvas;
     }
 
     /// <summary>Write where the strip is back to the config, so it comes back here next time.</summary>
@@ -196,6 +232,6 @@ public sealed class StripWindow : Window
         if (frame == _drawn) return;
 
         _drawn = frame;
-        (Content as StripCanvas)?.InvalidateVisual();
+        _canvas.InvalidateVisual();
     }
 }

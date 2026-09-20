@@ -57,6 +57,47 @@ public sealed class StripCanvas(StripScene scene, StripConfig config, StripLayou
         // Two things blooming at once on a strip this size reads as a fault rather than a state.
         DrawPad(context, layout.Toggle, Colour(config.Building), new PadFrame(frame.Building, 0), frame.Dimmed,
             "BUILDING", scale);
+
+        DrawClose(context, frame.Dimmed);
+    }
+
+    /// <summary>
+    /// The cross on the right-hand end, which puts the strip away in the tray.
+    /// </summary>
+    /// <remarks>
+    /// Drawn as an outline rather than a sixth lit pad. The pads carry the only meaning on the
+    /// strip — a lit one is a colour being held — and a control that glowed the same way would be
+    /// read as another one of those from across a desk, which is the distance this is designed for.
+    /// </remarks>
+    private void DrawClose(DrawingContext context, double dimmed)
+    {
+        var close = layout.Close;
+        var scale = layout.Scale;
+        var alpha = (byte)(150 * (1 - dimmed * 0.45));
+
+        var body = new RoundedRect(
+            new Rect(close.X, close.Y, close.Width, close.Height), 6 * scale);
+
+        // A slightly darker well than the chassis, so the cross has something to sit in. The same
+        // trick the pads use: alpha over the chassis rather than a colour of its own, which keeps
+        // it tinted with whatever is showing through a translucent strip.
+        context.DrawRectangle(new SolidColorBrush(Colors.Black, 0.18), null, body);
+        context.DrawRectangle(null, new Pen(new SolidColorBrush(Color.FromArgb(34, 255, 255, 255)), 1), body);
+
+        var pen = new Pen(new SolidColorBrush(Color.FromArgb(alpha, 236, 240, 245)), 1.5 * scale)
+        {
+            LineCap = PenLineCap.Round,
+        };
+
+        // Inset from the well rather than filling it: the cross is the target's centre, and the
+        // rest of the square is the margin that makes it forgiving to hit without looking bigger.
+        var inset = close.Width * 0.3;
+        context.DrawLine(pen,
+            new Point(close.X + inset, close.Y + inset),
+            new Point(close.Right - inset, close.Bottom - inset));
+        context.DrawLine(pen,
+            new Point(close.Right - inset, close.Y + inset),
+            new Point(close.X + inset, close.Bottom - inset));
     }
 
     /// <summary>The rounded slab everything sits on.</summary>
